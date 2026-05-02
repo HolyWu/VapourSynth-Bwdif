@@ -67,7 +67,7 @@ struct BwdifData final {
     VSVideoInfo vi;
     int field;
     int numFrames, edgeStep, lineStep, peak;
-    void (*filter)(const VSFrame* prevFrame, const VSFrame* curFrame, const VSFrame* nextFrame, const VSFrame* edeintFrame, VSFrame* dstFrame, const int field, const BwdifData* VS_RESTRICT d, const VSAPI* vsapi) noexcept;
+    void (*filter)(const VSFrame* prevFrame, const VSFrame* curFrame, const VSFrame* nextFrame, const VSFrame* edeintFrame, VSFrame* dstFrame, const int field, const int bff, const BwdifData* VS_RESTRICT d, const VSAPI* vsapi) noexcept;
     void (*filterEdgeWithSpat)(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
     void (*filterEdgeWithoutSpat)(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
     void (*filterLine)(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
@@ -206,7 +206,7 @@ static void filterLine_c(const void* _prev2, const void* _prev, const void* _cur
 
 template<typename pixel_t>
 static void filter(const VSFrame* prevFrame, const VSFrame* curFrame, const VSFrame* nextFrame, const VSFrame* edeintFrame, VSFrame* dstFrame,
-                   const int field, const BwdifData* VS_RESTRICT d, const VSAPI* vsapi) noexcept {
+                   const int field, const int bff, const BwdifData* VS_RESTRICT d, const VSAPI* vsapi) noexcept {
     for (auto plane{ 0 }; plane < d->vi.format.numPlanes; plane++) {
         const auto width{ vsapi->getFrameWidth(curFrame, plane) };
         const auto height{ vsapi->getFrameHeight(curFrame, plane) };
@@ -234,8 +234,8 @@ static void filter(const VSFrame* prevFrame, const VSFrame* curFrame, const VSFr
             edeint += stride * field;
         dst += stride * field;
 
-        auto prev2{ field ? prev : cur };
-        auto next2{ field ? cur : next };
+        auto prev2{ field ^ bff ? prev : cur };
+        auto next2{ field ^ bff ? cur : next };
 
         for (auto y{ field }; y < height; y += 2) {
             if ((y < 4) || (y + 5 > height)) {
@@ -276,7 +276,7 @@ static const VSFrame* VS_CC bwdifGetFrame(int n, int activationReason, void* ins
     auto d{ static_cast<const BwdifData*>(instanceData) };
 
     if (activationReason == arInitial) {
-        auto origN{ n };
+        auto nOrig{ n };
         if (d->field > 1)
             n /= 2;
 
@@ -287,14 +287,11 @@ static const VSFrame* VS_CC bwdifGetFrame(int n, int activationReason, void* ins
             vsapi->requestFrameFilter(n + 1, d->node, frameCtx);
 
         if (d->edeint)
-            vsapi->requestFrameFilter(origN, d->edeint, frameCtx);
+            vsapi->requestFrameFilter(nOrig, d->edeint, frameCtx);
     } else if (activationReason == arAllFramesReady) {
-        auto origN{ n };
-        auto field{ d->field };
-        if (d->field > 1) {
+        auto nOrig{ n };
+        if (d->field > 1)
             n /= 2;
-            field -= 2;
-        }
 
         auto prev{ vsapi->getFrameFilter(std::max(n - 1, 0), d->node, frameCtx) };
         auto cur{ vsapi->getFrameFilter(n, d->node, frameCtx) };
@@ -303,7 +300,9 @@ static const VSFrame* VS_CC bwdifGetFrame(int n, int activationReason, void* ins
 
         decltype(cur) edeint{ nullptr };
         if (d->edeint)
-            edeint = vsapi->getFrameFilter(origN, d->edeint, frameCtx);
+            edeint = vsapi->getFrameFilter(nOrig, d->edeint, frameCtx);
+
+        auto field{ d->field & 1 };
 
         auto err{ 0 };
         auto fieldBased{ vsapi->mapGetIntSaturated(vsapi->getFramePropertiesRO(cur), "_FieldBased", 0, &err) };
@@ -312,14 +311,12 @@ static const VSFrame* VS_CC bwdifGetFrame(int n, int activationReason, void* ins
         else if (fieldBased == VSC_FIELD_TOP)
             field = 1;
 
-        if (d->field > 1) {
-            if (origN & 1)
-                field = field == 0;
-            else
-                field = field == 1;
-        }
+        auto bff{ field ^ 1 };
 
-        d->filter(prev, cur, next, edeint, dst, field, d, vsapi);
+        if (d->field > 1)
+            field = (nOrig & 1) ^ field;
+
+        d->filter(prev, cur, next, edeint, dst, field, bff, d, vsapi);
 
         auto props{ vsapi->getFramePropertiesRW(dst) };
         vsapi->mapSetInt(props, "_FieldBased", VSC_FIELD_PROGRESSIVE, maReplace);
