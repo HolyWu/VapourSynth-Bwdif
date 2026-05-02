@@ -1,8 +1,8 @@
 /****************************  vectori512s.h   ********************************
 * Author:        Agner Fog
 * Date created:  2019-04-20
-* Last modified: 2020-02-23
-* Version:       2.01.01
+* Last modified: 2023-07-04
+* Version:       2.02.02
 * Project:       vector classes
 * Description:
 * Header file defining 512-bit integer vector classes for 8 and 16 bit integers.
@@ -22,7 +22,7 @@
 * Each vector object is represented internally in the CPU as a 512-bit register.
 * This header file defines operators and functions for these vectors.
 *
-* (c) Copyright 2012-2020 Agner Fog.
+* (c) Copyright 2012-2023 Agner Fog.
 * Apache License version 2.0 or later.
 ******************************************************************************/
 
@@ -33,7 +33,7 @@
 #include "vectorclass.h"
 #endif
 
-#if VECTORCLASS_H < 20100
+#if VECTORCLASS_H < 20200
 #error Incompatible versions of vector class library mixed
 #endif
 
@@ -57,11 +57,10 @@ namespace VCL_NAMESPACE {
 class Vec64c: public Vec512b {
 public:
     // Default constructor:
-    Vec64c() {
-    }
+    Vec64c() {}
     // Constructor to broadcast the same value into all elements:
-    Vec64c(int i) {
-        zmm = _mm512_set1_epi8((char)i);
+    Vec64c(int8_t i) {
+        zmm = _mm512_set1_epi8(i);
     }
     // Constructor to build from all elements:
     Vec64c(int8_t i0, int8_t i1, int8_t i2, int8_t i3, int8_t i4, int8_t i5, int8_t i6, int8_t i7,
@@ -182,8 +181,7 @@ protected:
     __mmask64  mm; // Boolean vector
 public:
     // Default constructor:
-    Vec64b () {
-    }
+    Vec64b () {}
     // Constructor to build from all elements:
     /*
     Vec64b(bool b0, bool b1, bool b2, bool b3, bool b4, bool b5, bool b6, bool b7,
@@ -607,7 +605,7 @@ static inline Vec64c abs_saturated(Vec64c const a) {
 // function rotate_left all elements
 // Use negative count to rotate right
 static inline Vec64c rotate_left(Vec64c const a, int b) {
-    uint8_t mask  = 0xFFu << b;                    // mask off overflow bits
+    int8_t  mask  = int8_t(0xFFu << b);            // mask off overflow bits
     __m512i m     = _mm512_set1_epi8(mask);
     __m128i bb    = _mm_cvtsi32_si128(b & 7);      // b modulo 8
     __m128i mbb   = _mm_cvtsi32_si128((- b) & 7);  // 8-b modulo 8
@@ -628,11 +626,10 @@ static inline Vec64c rotate_left(Vec64c const a, int b) {
 class Vec64uc : public Vec64c {
 public:
     // Default constructor:
-    Vec64uc() {
-    }
+    Vec64uc() {}
     // Constructor to broadcast the same value into all elements:
-    Vec64uc(uint32_t i) {
-        zmm = _mm512_set1_epi8((char)i);
+    Vec64uc(uint8_t i) {
+        zmm = _mm512_set1_epi8((int8_t)i);
     }
     // Constructor to build from all elements:
     Vec64uc(uint8_t i0, uint8_t i1, uint8_t i2, uint8_t i3, uint8_t i4, uint8_t i5, uint8_t i6, uint8_t i7,
@@ -643,10 +640,10 @@ public:
         uint8_t i40, uint8_t i41, uint8_t i42, uint8_t i43, uint8_t i44, uint8_t i45, uint8_t i46, uint8_t i47,
         uint8_t i48, uint8_t i49, uint8_t i50, uint8_t i51, uint8_t i52, uint8_t i53, uint8_t i54, uint8_t i55,
         uint8_t i56, uint8_t i57, uint8_t i58, uint8_t i59, uint8_t i60, uint8_t i61, uint8_t i62, uint8_t i63)
-        : Vec64c(i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15,
-            i16, i17, i18, i19, i20, i21, i22, i23, i24, i25, i26, i27, i28, i29, i30, i31,
-            i32, i33, i34, i35, i36, i37, i38, i39, i40, i41, i42, i43, i44, i45, i46, i47,
-            i48, i49, i50, i51, i52, i53, i54, i55, i56, i57, i58, i59, i60, i61, i62, i63) {}
+        : Vec64c(int8_t(i0), int8_t(i1), int8_t(i2), int8_t(i3), int8_t(i4), int8_t(i5), int8_t(i6), int8_t(i7), int8_t(i8), int8_t(i9), int8_t(i10), int8_t(i11), int8_t(i12), int8_t(i13), int8_t(i14), int8_t(i15),
+            int8_t(i16), int8_t(i17), int8_t(i18), int8_t(i19), int8_t(i20), int8_t(i21), int8_t(i22), int8_t(i23), int8_t(i24), int8_t(i25), int8_t(i26), int8_t(i27), int8_t(i28), int8_t(i29), int8_t(i30), int8_t(i31),
+            int8_t(i32), int8_t(i33), int8_t(i34), int8_t(i35), int8_t(i36), int8_t(i37), int8_t(i38), int8_t(i39), int8_t(i40), int8_t(i41), int8_t(i42), int8_t(i43), int8_t(i44), int8_t(i45), int8_t(i46), int8_t(i47),
+            int8_t(i48), int8_t(i49), int8_t(i50), int8_t(i51), int8_t(i52), int8_t(i53), int8_t(i54), int8_t(i55), int8_t(i56), int8_t(i57), int8_t(i58), int8_t(i59), int8_t(i60), int8_t(i61), int8_t(i62), int8_t(i63)) {}
 
     // Constructor to build from two Vec32uc:
     Vec64uc(Vec32uc const a0, Vec32uc const a1) {
@@ -842,11 +839,10 @@ static inline Vec64uc min(Vec64uc const a, Vec64uc const b) {
 class Vec32s: public Vec512b {
 public:
     // Default constructor:
-    Vec32s() {
-    }
+    Vec32s() {}
     // Constructor to broadcast the same value into all elements:
-    Vec32s(int i) {
-        zmm = _mm512_set1_epi16((int16_t)i);
+    Vec32s(int16_t i) {
+        zmm = _mm512_set1_epi16(i);
     }
     // Constructor to build from all elements:
     Vec32s(int16_t i0, int16_t i1, int16_t i2, int16_t i3, int16_t i4, int16_t i5, int16_t i6, int16_t i7,
@@ -1197,10 +1193,9 @@ static inline Vec32s rotate_left(Vec32s const a, int b) {
 class Vec32us : public Vec32s {
 public:
     // Default constructor:
-    Vec32us() {
-    }
+    Vec32us() {}
     // Constructor to broadcast the same value into all elements:
-    Vec32us(uint32_t i) {
+    Vec32us(uint16_t i) {
         zmm = _mm512_set1_epi16((int16_t)i);
     }
     // Constructor to build from all elements. Inherit from Vec32s
@@ -1208,8 +1203,8 @@ public:
         uint16_t i8,  uint16_t i9,  uint16_t i10, uint16_t i11, uint16_t i12, uint16_t i13, uint16_t i14, uint16_t i15,
         uint16_t i16, uint16_t i17, uint16_t i18, uint16_t i19, uint16_t i20, uint16_t i21, uint16_t i22, uint16_t i23,
         uint16_t i24, uint16_t i25, uint16_t i26, uint16_t i27, uint16_t i28, uint16_t i29, uint16_t i30, uint16_t i31)
-    : Vec32s(i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15,
-         i16, i17, i18, i19, i20, i21, i22, i23, i24, i25, i26, i27, i28, i29, i30, i31) {}
+    : Vec32s(int16_t(i0), int16_t(i1), int16_t(i2), int16_t(i3), int16_t(i4), int16_t(i5), int16_t(i6), int16_t(i7), int16_t(i8), int16_t(i9), int16_t(i10), int16_t(i11), int16_t(i12), int16_t(i13), int16_t(i14), int16_t(i15),
+         int16_t(i16), int16_t(i17), int16_t(i18), int16_t(i19), int16_t(i20), int16_t(i21), int16_t(i22), int16_t(i23), int16_t(i24), int16_t(i25), int16_t(i26), int16_t(i27), int16_t(i28), int16_t(i29), int16_t(i30), int16_t(i31)) {}
 
     // Constructor to build from two Vec16us:
     Vec32us(Vec16us const a0, Vec16us const a1) {
@@ -1428,6 +1423,10 @@ template <int... i0 >
         else if constexpr ((flags & perm_same_pattern) != 0) {  // same pattern in all lanes
             if constexpr ((flags & perm_rotate) != 0) {         // fits palignr. rotate within lanes
                 y = _mm512_alignr_epi8(a, a, (flags >> perm_rot_count) & 0xF);
+            }
+            else if constexpr ((flags & perm_swap) != 0) {      // swap adjacent elements. rotate 32 bits
+                y = _mm512_rol_epi32(a, 16);
+
             }
             else { // use pshufb
                 constexpr EList <int8_t, 64> bm = pshufb_mask<Vec32s>(indexs);
@@ -1886,7 +1885,7 @@ static inline Vec64c shift_bytes_down(Vec64c const a) {
 
 /*****************************************************************************
 *
-*          Functions for conversion between integer sizes
+*          Functions for conversion between integer sizes and vector types
 *
 *****************************************************************************/
 
@@ -2042,6 +2041,45 @@ static inline Vec32us compress_saturated_s2u (Vec16i const low, Vec16i const hig
     __m512i in    = constant16ui<0,0,2,0,4,0,6,0,1,0,3,0,5,0,7,0>();
     return  _mm512_permutexvar_epi64(in, pk);              // put in right place
 }
+
+#ifdef ZEXT_MISSING
+// GCC v. 9 and earlier are missing the _mm512_zextsi256_si512 intrinsic
+
+// extend vectors to double size by adding zeroes
+static inline Vec64c extend_z(Vec32c a) {
+    return Vec64c(a, Vec32c(0));
+}
+static inline Vec64uc extend_z(Vec32uc a) {
+    return Vec64uc(a, Vec32uc(0));
+}
+static inline Vec32s extend_z(Vec16s a) {
+    return Vec32s(a, Vec16s(0));
+}
+static inline Vec32us extend_z(Vec16us a) {
+    return Vec32us(a, Vec16us(0));
+}
+#else
+// extend vectors to double size by adding zeroes
+static inline Vec64c extend_z(Vec32c a) {
+    return _mm512_zextsi256_si512(a);
+}
+static inline Vec64uc extend_z(Vec32uc a) {
+    return _mm512_zextsi256_si512(a);
+}
+static inline Vec32s extend_z(Vec16s a) {
+    return _mm512_zextsi256_si512(a);
+}
+static inline Vec32us extend_z(Vec16us a) {
+    return _mm512_zextsi256_si512(a);
+}
+#endif
+
+// compact boolean vectors
+
+static inline Vec64b extend_z(Vec32b a) {
+    return __mmask64(__mmask32(a));
+}
+//static inline Vec32sb extend_z(Vec16sb a); same as Vec32cb extend_z(Vec16cb a) {
 
 
 /*****************************************************************************

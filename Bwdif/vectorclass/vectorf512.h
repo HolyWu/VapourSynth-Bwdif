@@ -1,8 +1,8 @@
 /****************************  vectorf512.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2021-08-18
-* Version:       2.01.03
+* Last modified: 2023-07-04
+* Version:       2.02.02
 * Project:       vector class library
 * Description:
 * Header file defining 512-bit floating point vector classes
@@ -18,7 +18,7 @@
 * Each vector object is represented internally in the CPU a 512-bit register.
 * This header file defines operators and functions for these vectors.
 *
-* (c) Copyright 2014-2021 Agner Fog.
+* (c) Copyright 2014-2023 Agner Fog.
 * Apache License version 2.0 or later.
 *****************************************************************************/
 
@@ -29,7 +29,7 @@
 #include "vectorclass.h"
 #endif
 
-#if VECTORCLASS_H < 20100
+#if VECTORCLASS_H < 20200
 #error Incompatible versions of vector class library mixed
 #endif
 
@@ -56,16 +56,16 @@ typedef Vec8b  Vec8db;
 
 #if INSTRSET == 9  // special cases of mixed compact and broad vectors
 inline Vec16b::Vec16b(Vec8ib const x0, Vec8ib const x1) {
-    mm = to_bits(x0) | uint16_t(to_bits(x1) << 8);
+    mm = uint16_t(to_bits(x0) | uint16_t(to_bits(x1) << 8));
 }
 inline Vec16b::Vec16b(Vec8fb const x0, Vec8fb const x1) {
-    mm = to_bits(x0) | uint16_t(to_bits(x1) << 8);
+    mm = uint16_t(to_bits(x0) | uint16_t(to_bits(x1) << 8));
 }
 inline Vec8b::Vec8b(Vec4qb const x0, Vec4qb const x1) {
-    mm = to_bits(x0) | (to_bits(x1) << 4);
+    mm = Vec8b_masktype(to_bits(x0) | (to_bits(x1) << 4));  // see definition of Vec8b_masktype in vectori128.h
 }
 inline Vec8b::Vec8b(Vec4db const x0, Vec4db const x1) {
-    mm = to_bits(x0) | (to_bits(x1) << 4);
+    mm = Vec8b_masktype(to_bits(x0) | (to_bits(x1) << 4));
 }
 
 inline Vec8ib Vec16b::get_low() const {
@@ -75,10 +75,10 @@ inline Vec8ib Vec16b::get_high() const {
     return Vec8ib().load_bits(uint8_t((uint16_t)mm >> 8u));
 }
 inline Vec4qb Vec8b::get_low() const {
-    return Vec4qb().load_bits(mm & 0xF);
+    return Vec4qb().load_bits(uint8_t(mm & 0xF));
 }
 inline Vec4qb Vec8b::get_high() const {
-    return Vec4qb().load_bits(mm >> 4u);
+    return Vec4qb().load_bits(uint8_t(mm >> 4u));
 }
 
 #endif
@@ -95,8 +95,7 @@ protected:
     __m512 zmm; // Float vector
 public:
     // Default constructor:
-    Vec16f() {
-    }
+    Vec16f() {}
     // Constructor to broadcast the same value into all elements:
     Vec16f(float f) {
         zmm = _mm512_set1_ps(f);
@@ -124,31 +123,31 @@ public:
         return zmm;
     }
     // Member function to load from array (unaligned)
-    Vec16f & load(float const * p) {
-        zmm = _mm512_loadu_ps(p);
+    Vec16f & load(void const * p) {
+        zmm = _mm512_loadu_ps((float const *)p);
         return *this;
     }
     // Member function to load from array, aligned by 64
     // You may use load_a instead of load if you are certain that p points to an address divisible by 64
-    Vec16f & load_a(float const * p) {
-        zmm = _mm512_load_ps(p);
+    Vec16f & load_a(void const * p) {
+        zmm = _mm512_load_ps((float const *)p);
         return *this;
     }
     // Member function to store into array (unaligned)
-    void store(float * p) const {
-        _mm512_storeu_ps(p, zmm);
+    void store(void * p) const {
+        _mm512_storeu_ps((float *)p, zmm);
     }
     // Member function storing into array, aligned by 64
     // You may use store_a instead of store if you are certain that p points to an address divisible by 64
-    void store_a(float * p) const {
-        _mm512_store_ps(p, zmm);
+    void store_a(void * p) const {
+        _mm512_store_ps((float *)p, zmm);
     }
     // Member function storing to aligned uncached memory (non-temporal store).
     // This may be more efficient than store_a when storing large blocks of memory if it 
     // is unlikely that the data will stay in the cache until it is read again.
     // Note: Will generate runtime error if p is not aligned by 16
-    void store_nt(float * p) const {
-        _mm512_stream_ps(p, zmm);
+    void store_nt(void * p) const {
+        _mm512_stream_ps((float *)p, zmm);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec16f & load_partial(int n, float const * p) {
@@ -336,12 +335,12 @@ static inline Vec16fb operator <= (Vec16f const a, Vec16f const b) {
 
 // vector operator > : returns true for elements for which a > b
 static inline Vec16fb operator > (Vec16f const a, Vec16f const b) {
-    return _mm512_cmp_ps_mask(a, b, 6);
+    return _mm512_cmp_ps_mask(a, b, 6+8);
 }
 
 // vector operator >= : returns true for elements for which a >= b
 static inline Vec16fb operator >= (Vec16f const a, Vec16f const b) {
-    return _mm512_cmp_ps_mask(a, b, 5);
+    return _mm512_cmp_ps_mask(a, b, 5+8);
 }
 
 // Bitwise logical operators
@@ -451,7 +450,7 @@ static inline Vec16f sign_combine(Vec16f const a, Vec16f const b) {
 
 // Categorization functions
 
-// Function is_finite: gives true for elements that are normal, denormal or zero,
+// Function is_finite: gives true for elements that are normal, subnormal or zero,
 // false for INF and NAN
 // (the underscore in the name avoids a conflict with a macro in Intel's mathimf.h)
 static inline Vec16fb is_finite(Vec16f const a) {
@@ -508,7 +507,7 @@ static inline Vec16fb is_nan(Vec16f const a) {
 #endif
 
 
-// Function is_subnormal: gives true for elements that are denormal (subnormal)
+// Function is_subnormal: gives true for elements that are subnormal
 // false for finite numbers, zero, NAN and INF
 static inline Vec16fb is_subnormal(Vec16f const a) {
 #if INSTRSET >= 10  // __AVX512DQ__
@@ -523,7 +522,7 @@ static inline Vec16fb is_subnormal(Vec16f const a) {
 #endif
 }
 
-// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal (denormal)
+// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal
 // false for finite numbers, NAN and INF
 static inline Vec16fb is_zero_or_subnormal(Vec16f const a) {
 #if INSTRSET >= 10  // __AVX512DQ__
@@ -728,7 +727,7 @@ static inline Vec16f fraction(Vec16f const a) {
 // n  =    0 gives 1.0f
 // n >=  128 gives +INF
 // n <= -127 gives 0.0f
-// This function will never produce denormals, and never raise exceptions
+// This function will never produce subnormals, and never raise exceptions
 static inline Vec16f exp2(Vec16i const n) {
     Vec16i t1 = max(n,  -0x7F);         // limit to allowed range
     Vec16i t2 = min(t1,  0x80);
@@ -750,8 +749,7 @@ protected:
     __m512d zmm; // double vector
 public:
     // Default constructor:
-    Vec8d() {
-    }
+    Vec8d() {}
     // Constructor to broadcast the same value into all elements:
     Vec8d(double d) {
         zmm = _mm512_set1_pd(d);
@@ -994,12 +992,12 @@ static inline Vec8db operator <= (Vec8d const a, Vec8d const b) {
 
 // vector operator > : returns true for elements for which a > b
 static inline Vec8db operator > (Vec8d const a, Vec8d const b) {
-    return _mm512_cmp_pd_mask(a, b, 6);
+    return _mm512_cmp_pd_mask(a, b, 6+8);
 }
 
 // vector operator >= : returns true for elements for which a >= b
 static inline Vec8db operator >= (Vec8d const a, Vec8d const b) {
-    return _mm512_cmp_pd_mask(a, b, 5);
+    return _mm512_cmp_pd_mask(a, b, 5+8);
 }
 
 // Bitwise logical operators
@@ -1103,7 +1101,7 @@ static inline Vec8d sign_combine(Vec8d const a, Vec8d const b) {
 
 // Categorization functions
 
-// Function is_finite: gives true for elements that are normal, denormal or zero,
+// Function is_finite: gives true for elements that are normal, subnormal or zero,
 // false for INF and NAN
 static inline Vec8db is_finite(Vec8d const a) {
 #if INSTRSET >= 10 // __AVX512DQ__
@@ -1159,7 +1157,7 @@ static inline Vec8db is_nan(Vec8d const a) {
 #endif
 
 
-// Function is_subnormal: gives true for elements that are denormal (subnormal)
+// Function is_subnormal: gives true for elements that are subnormal
 // false for finite numbers, zero, NAN and INF
 static inline Vec8db is_subnormal(Vec8d const a) {
 #if INSTRSET >= 10  // __AVX512DQ__
@@ -1174,7 +1172,7 @@ static inline Vec8db is_subnormal(Vec8d const a) {
 #endif
 }
 
-// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal (denormal)
+// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal
 // false for finite numbers, NAN and INF
 static inline Vec8db is_zero_or_subnormal(Vec8d const a) {
 #if INSTRSET >= 10  // __AVX512DQ__
@@ -1414,7 +1412,7 @@ static inline Vec8d fraction(Vec8d const a) {
 // n  =     0 gives 1.0
 // n >=  1024 gives +INF
 // n <= -1023 gives 0.0
-// This function will never produce denormals, and never raise exceptions
+// This function will never produce subnormals, and never raise exceptions
 static inline Vec8d exp2(Vec8q const n) {
     Vec8q t1 = max(n,  -0x3FF);        // limit to allowed range
     Vec8q t2 = min(t1,  0x400);
@@ -1470,13 +1468,31 @@ static inline __m512d reinterpret_d (__m512d const x) {
     return x;
 }
 
+#if defined(__GNUC__) && __GNUC__ <= 9 // GCC v. 9 is missing the _mm512_zextps256_ps512 intrinsic
+// extend vectors to double size by adding zeroes
+static inline Vec16f extend_z(Vec8f a) {
+    return Vec16f(a, Vec8f(0));
+}
+static inline Vec8d extend_z(Vec4d a) {
+    return Vec8d(a, Vec4d(0));
+}
+#else
+// extend vectors to double size by adding zeroes
+static inline Vec16f extend_z(Vec8f a) {
+    return _mm512_zextps256_ps512(a);
+}
+static inline Vec8d extend_z(Vec4d a) {
+    return _mm512_zextpd256_pd512(a);
+}
+#endif
+
 // Function infinite4f: returns a vector where all elements are +INF
 static inline Vec16f infinite16f() {
     return reinterpret_f(Vec16i(0x7F800000));
 }
 
 // Function nan4f: returns a vector where all elements are +NAN (quiet)
-static inline Vec16f nan16f(int n = 0x100) {
+static inline Vec16f nan16f(uint32_t n = 0x100) {
     return nan_vec<Vec16f>(n);
 }
 
@@ -1486,7 +1502,7 @@ static inline Vec8d infinite8d() {
 }
 
 // Function nan8d: returns a vector where all elements are +NAN (quiet NAN)
-static inline Vec8d nan8d(int n = 0x10) {
+static inline Vec8d nan8d(uint32_t n = 0x10) {
     return nan_vec<Vec8d>(n);
 }
 

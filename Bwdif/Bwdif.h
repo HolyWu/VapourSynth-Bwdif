@@ -4,7 +4,7 @@
 #include <type_traits>
 
 #ifdef BWDIF_X86
-#include "VCL2/vectorclass.h"
+#include "vectorclass/vectorclass.h"
 #endif
 
 /*
