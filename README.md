@@ -1,11 +1,15 @@
 # Bwdif
+
 Motion adaptive deinterlacing based on yadif with the use of w3fdif and cubic interpolation algorithms.
 
-Ported from FFmpeg's libavfilter https://www.ffmpeg.org/ffmpeg-filters.html#bwdif
+Ported from FFmpeg's libavfilter https://www.ffmpeg.org/ffmpeg-filters.html#bwdif.
 
 
-## Usage
-    bwdif.Bwdif(vnode clip, int field[, vnode edeint=None, int opt=0])
+## Parameters
+
+```py
+bwdif.Bwdif(vnode clip, int field[, vnode edeint=None, int opt=0])
+```
 
 - clip: Clip to process. Any format with either integer sample type of 8-16 bit depth or float sample type of 32 bit depth is supported.
 
@@ -17,7 +21,7 @@ Ported from FFmpeg's libavfilter https://www.ffmpeg.org/ffmpeg-filters.html#bwdi
 
 - edeint: Allows the specification of an external clip from which to take spatial predictions instead of having Bwdif use cubic interpolation. This clip must be the same width, height, and colorspace as the input clip. If using same rate output, this clip should have the same number of frames as the input. If using double rate output, this clip should have twice as many frames as the input.
 
-- opt: Sets which cpu optimizations to use.
+- opt: Specifies which cpu optimizations to use.
   - 0 = auto detect
   - 1 = use c
   - 2 = use sse4.1
@@ -25,9 +29,8 @@ Ported from FFmpeg's libavfilter https://www.ffmpeg.org/ffmpeg-filters.html#bwdi
   - 4 = use avx512
 
 
-## Compilation
+## Installation
+
 ```
-meson build
-ninja -C build
-ninja -C build install
+pip install -U vapoursynth-bwdif
 ```

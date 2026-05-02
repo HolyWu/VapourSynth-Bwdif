@@ -1,82 +1,55 @@
 project('Bwdif', 'cpp',
-  default_options: ['buildtype=release', 'warning_level=2', 'b_lto=true', 'b_ndebug=if-release', 'cpp_std=c++17'],
-  license: 'LGPL-3.0-or-later',
-  meson_version: '>=0.51.0',
-  version: '4.1'
+    default_options: ['buildtype=release', 'warning_level=2', 'b_lto=true', 'b_ndebug=if-release', 'cpp_std=c++17'],
+    license: 'LGPL-3.0-or-later',
+    license_files: 'LICENSE',
+    meson_version: '>=1.2.3',
+    version: '4.1',
 )
 
-cxx = meson.get_compiler('cpp')
+py = import('python').find_installation(pure: false)
 
-gcc_syntax = cxx.get_argument_syntax() == 'gcc'
-
-if get_option('buildtype') == 'release'
-  add_project_arguments(gcc_syntax ? ['-fno-math-errno', '-fno-trapping-math'] : '/GS-', language: 'cpp')
-endif
-
-if gcc_syntax
-  vapoursynth_dep = dependency('vapoursynth', version: '>=55').partial_dependency(compile_args: true, includes: true)
-  install_dir = vapoursynth_dep.get_variable(pkgconfig: 'libdir') / 'vapoursynth'
-else
-  vapoursynth_dep = dependency('', required: false)
-  install_dir = get_option('libdir') / 'vapoursynth'
-endif
-
-sources = [
-  'Bwdif/Bwdif.cpp',
-  'Bwdif/Bwdif.h'
-]
+incdir = include_directories(
+    run_command(py, '-c', 'import vapoursynth as vs; print(vs.get_include())', check: true).stdout().strip(),
+)
 
 libs = []
 
 if host_machine.cpu_family().startswith('x86')
-  project_args = ['-DBWDIF_X86']
-  if gcc_syntax
-    project_args += ['-mfpmath=sse', '-msse2']
-  endif
-  add_project_arguments(project_args, language: 'cpp')
+    add_project_arguments('-DBWDIF_X86', language: 'cpp')
 
-  sources += [
-    'Bwdif/Bwdif_SSE2.cpp',
-    'Bwdif/VCL2/instrset.h',
-    'Bwdif/VCL2/instrset_detect.cpp',
-    'Bwdif/VCL2/vector_convert.h',
-    'Bwdif/VCL2/vectorclass.h',
-    'Bwdif/VCL2/vectorf128.h',
-    'Bwdif/VCL2/vectorf256.h',
-    'Bwdif/VCL2/vectorf256e.h',
-    'Bwdif/VCL2/vectorf512.h',
-    'Bwdif/VCL2/vectorf512e.h',
-    'Bwdif/VCL2/vectori128.h',
-    'Bwdif/VCL2/vectori256.h',
-    'Bwdif/VCL2/vectori256e.h',
-    'Bwdif/VCL2/vectori512.h',
-    'Bwdif/VCL2/vectori512e.h',
-    'Bwdif/VCL2/vectori512s.h',
-    'Bwdif/VCL2/vectori512se.h',
-    'Bwdif/VCL2/vectormath_common.h',
-    'Bwdif/VCL2/vectormath_exp.h',
-    'Bwdif/VCL2/vectormath_hyp.h',
-    'Bwdif/VCL2/vectormath_lib.h',
-    'Bwdif/VCL2/vectormath_trig.h'
-  ]
+    libs += static_library('instrset_detect',
+        files('Bwdif/vectorclass/instrset_detect.cpp'),
+        gnu_symbol_visibility: 'hidden',
+    )
 
-  libs += static_library('avx2', 'Bwdif/Bwdif_AVX2.cpp',
-    cpp_args: gcc_syntax ? ['-mavx2', '-mfma'] : '/arch:AVX2',
-    dependencies: vapoursynth_dep,
-    gnu_symbol_visibility: 'hidden'
-  )
+    libs += static_library('sse4',
+        files('Bwdif/Bwdif_SSE4.cpp'),
+        cpp_args: '-march=x86-64-v2',
+        gnu_symbol_visibility: 'hidden',
+        include_directories: incdir,
+    )
 
-  libs += static_library('avx512', 'Bwdif/Bwdif_AVX512.cpp',
-    cpp_args: gcc_syntax ? ['-mavx512f', '-mavx512bw', '-mavx512dq', '-mavx512vl', '-mfma'] : '/arch:AVX512',
-    dependencies: vapoursynth_dep,
-    gnu_symbol_visibility: 'hidden'
-  )
+    libs += static_library('avx2',
+        files('Bwdif/Bwdif_AVX2.cpp'),
+        cpp_args: '-march=x86-64-v3',
+        gnu_symbol_visibility: 'hidden',
+        include_directories: incdir,
+    )
+
+    libs += static_library('avx512',
+        files('Bwdif/Bwdif_AVX512.cpp'),
+        cpp_args: '-march=x86-64-v4',
+        gnu_symbol_visibility: 'hidden',
+        include_directories: incdir,
+    )
 endif
 
-shared_module('bwdif', sources,
-  dependencies: vapoursynth_dep,
-  link_with: libs,
-  install: true,
-  install_dir: install_dir,
-  gnu_symbol_visibility: 'hidden'
+shared_module('bwdif',
+    files('Bwdif/Bwdif.cpp'),
+    gnu_symbol_visibility: 'hidden',
+    include_directories: incdir,
+    install: true,
+    install_dir: py.get_install_dir() / 'vapoursynth/plugins',
+    link_with: libs,
+    name_prefix: '',
 )
