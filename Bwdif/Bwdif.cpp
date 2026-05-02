@@ -486,7 +486,7 @@ static void VS_CC bwdifCreate(const VSMap* in, VSMap* out, [[maybe_unused]] void
                     d->edgeStep = 8;
                 }
                 d->lineStep = 8;
-            } else if ((opt == 0 && iset >= 2) || opt == 2) {
+            } else if ((opt == 0 && iset >= 5) || opt == 2) {
                 if (d->vi.format.bytesPerSample == 1) {
                     if (d->edeint) {
                         d->filterEdgeWithSpat = filterEdge_sse4<uint8_t, true, true>;
