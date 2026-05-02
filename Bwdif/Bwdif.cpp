@@ -40,28 +40,34 @@
 
 #include "Bwdif.h"
 
-using namespace std::literals;
+using namespace std::string_literals;
 
 #ifdef BWDIF_X86
-template<typename pixel_t, bool spat, bool hasEdeint> extern void filterEdge_sse2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
-template<typename pixel_t, bool spat, bool hasEdeint> extern void filterEdge_avx2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
-template<typename pixel_t, bool spat, bool hasEdeint> extern void filterEdge_avx512(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
+template<typename pixel_t, bool spat, bool hasEdeint>
+extern void filterEdge_sse2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
 
-template<typename pixel_t, bool hasEdeint> extern void filterLine_sse2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
-template<typename pixel_t, bool hasEdeint> extern void filterLine_avx2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
-template<typename pixel_t, bool hasEdeint> extern void filterLine_avx512(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
+template<typename pixel_t, bool spat, bool hasEdeint>
+extern void filterEdge_avx2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
+
+template<typename pixel_t, bool spat, bool hasEdeint>
+extern void filterEdge_avx512(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
+
+template<typename pixel_t, bool hasEdeint>
+extern void filterLine_sse2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
+
+template<typename pixel_t, bool hasEdeint>
+extern void filterLine_avx2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
+
+template<typename pixel_t, bool hasEdeint>
+extern void filterLine_avx512(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
 #endif
 
 struct BwdifData final {
-    VSNode* node;
-    VSNode* edeint;
+    VSNode* node, * edeint;
     VSVideoInfo vi;
-    const VSVideoInfo* viSaved;
     int field;
-    int edgeStep;
-    int lineStep;
-    int peak;
-    void (*filter)(const VSFrame* prevFrame, const VSFrame* curFrame, const VSFrame* nextFrame, const VSFrame* edeintFrame, VSFrame* dstFrame, const int field, const BwdifData* const VS_RESTRICT d, const VSAPI* vsapi) noexcept;
+    int numFrames, edgeStep, lineStep, peak;
+    void (*filter)(const VSFrame* prevFrame, const VSFrame* curFrame, const VSFrame* nextFrame, const VSFrame* edeintFrame, VSFrame* dstFrame, const int field, const BwdifData* VS_RESTRICT d, const VSAPI* vsapi) noexcept;
     void (*filterEdgeWithSpat)(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
     void (*filterEdgeWithoutSpat)(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
     void (*filterLine)(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
@@ -200,7 +206,7 @@ static void filterLine_c(const void* _prev2, const void* _prev, const void* _cur
 
 template<typename pixel_t>
 static void filter(const VSFrame* prevFrame, const VSFrame* curFrame, const VSFrame* nextFrame, const VSFrame* edeintFrame, VSFrame* dstFrame,
-                   const int field, const BwdifData* const VS_RESTRICT d, const VSAPI* vsapi) noexcept {
+                   const int field, const BwdifData* VS_RESTRICT d, const VSAPI* vsapi) noexcept {
     for (auto plane{ 0 }; plane < d->vi.format.numPlanes; plane++) {
         const auto width{ vsapi->getFrameWidth(curFrame, plane) };
         const auto height{ vsapi->getFrameHeight(curFrame, plane) };
@@ -270,20 +276,20 @@ static const VSFrame* VS_CC bwdifGetFrame(int n, int activationReason, void* ins
     auto d{ static_cast<const BwdifData*>(instanceData) };
 
     if (activationReason == arInitial) {
-        auto nSaved{ n };
+        auto origN{ n };
         if (d->field > 1)
             n /= 2;
 
         if (n > 0)
             vsapi->requestFrameFilter(n - 1, d->node, frameCtx);
         vsapi->requestFrameFilter(n, d->node, frameCtx);
-        if (n < d->viSaved->numFrames - 1)
+        if (n < d->numFrames - 1)
             vsapi->requestFrameFilter(n + 1, d->node, frameCtx);
 
         if (d->edeint)
-            vsapi->requestFrameFilter(nSaved, d->edeint, frameCtx);
+            vsapi->requestFrameFilter(origN, d->edeint, frameCtx);
     } else if (activationReason == arAllFramesReady) {
-        auto nSaved{ n };
+        auto origN{ n };
         auto field{ d->field };
         if (d->field > 1) {
             n /= 2;
@@ -292,12 +298,12 @@ static const VSFrame* VS_CC bwdifGetFrame(int n, int activationReason, void* ins
 
         auto prev{ vsapi->getFrameFilter(std::max(n - 1, 0), d->node, frameCtx) };
         auto cur{ vsapi->getFrameFilter(n, d->node, frameCtx) };
-        auto next{ vsapi->getFrameFilter(std::min(n + 1, d->viSaved->numFrames - 1), d->node, frameCtx) };
+        auto next{ vsapi->getFrameFilter(std::min(n + 1, d->numFrames - 1), d->node, frameCtx) };
         auto dst{ vsapi->newVideoFrame(&d->vi.format, d->vi.width, d->vi.height, cur, core) };
 
         decltype(cur) edeint{ nullptr };
         if (d->edeint)
-            edeint = vsapi->getFrameFilter(nSaved, d->edeint, frameCtx);
+            edeint = vsapi->getFrameFilter(origN, d->edeint, frameCtx);
 
         auto err{ 0 };
         auto fieldBased{ vsapi->mapGetIntSaturated(vsapi->getFramePropertiesRO(cur), "_FieldBased", 0, &err) };
@@ -307,7 +313,7 @@ static const VSFrame* VS_CC bwdifGetFrame(int n, int activationReason, void* ins
             field = 1;
 
         if (d->field > 1) {
-            if (nSaved & 1)
+            if (origN & 1)
                 field = field == 0;
             else
                 field = field == 1;
@@ -352,7 +358,7 @@ static void VS_CC bwdifCreate(const VSMap* in, VSMap* out, [[maybe_unused]] void
     try {
         d->node = vsapi->mapGetNode(in, "clip", 0, nullptr);
         d->vi = *vsapi->getVideoInfo(d->node);
-        d->viSaved = vsapi->getVideoInfo(d->node);
+        d->numFrames = d->vi.numFrames;
         auto err{ 0 };
 
         if (!vsh::isConstantVideoFormat(&d->vi) ||
@@ -562,11 +568,5 @@ static void VS_CC bwdifCreate(const VSMap* in, VSMap* out, [[maybe_unused]] void
 
 VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin* plugin, const VSPLUGINAPI* vspapi) {
     vspapi->configPlugin("com.holywu.bwdif", "bwdif", "BobWeaver Deinterlacing Filter", VS_MAKE_VERSION(4, 1), VAPOURSYNTH_API_VERSION, 0, plugin);
-    vspapi->registerFunction("Bwdif",
-                             "clip:vnode;"
-                             "field:int;"
-                             "edeint:vnode:opt;"
-                             "opt:int:opt;",
-                             "clip:vnode;",
-                             bwdifCreate, nullptr, plugin);
+    vspapi->registerFunction("Bwdif", "clip:vnode;field:int;edeint:vnode:opt;opt:int:opt;", "clip:vnode;", bwdifCreate, nullptr, plugin);
 }
