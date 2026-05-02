@@ -44,7 +44,7 @@ using namespace std::string_literals;
 
 #ifdef BWDIF_X86
 template<typename pixel_t, bool spat, bool hasEdeint>
-extern void filterEdge_sse2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
+extern void filterEdge_sse4(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
 
 template<typename pixel_t, bool spat, bool hasEdeint>
 extern void filterEdge_avx2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
@@ -53,7 +53,7 @@ template<typename pixel_t, bool spat, bool hasEdeint>
 extern void filterEdge_avx512(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t positiveStride, const ptrdiff_t negativeStride, const ptrdiff_t stride2, const int step) noexcept;
 
 template<typename pixel_t, bool hasEdeint>
-extern void filterLine_sse2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
+extern void filterLine_sse4(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
 
 template<typename pixel_t, bool hasEdeint>
 extern void filterLine_avx2(const void* _prev2, const void* _prev, const void* _cur, const void* _next, const void* _next2, const void* _edeint, void* _dst, const int width, const ptrdiff_t stride, const ptrdiff_t stride2, const ptrdiff_t stride3, const ptrdiff_t stride4, const int step, const int peak) noexcept;
@@ -489,35 +489,35 @@ static void VS_CC bwdifCreate(const VSMap* in, VSMap* out, [[maybe_unused]] void
             } else if ((opt == 0 && iset >= 2) || opt == 2) {
                 if (d->vi.format.bytesPerSample == 1) {
                     if (d->edeint) {
-                        d->filterEdgeWithSpat = filterEdge_sse2<uint8_t, true, true>;
-                        d->filterEdgeWithoutSpat = filterEdge_sse2<uint8_t, false, true>;
-                        d->filterLine = filterLine_sse2<uint8_t, true>;
+                        d->filterEdgeWithSpat = filterEdge_sse4<uint8_t, true, true>;
+                        d->filterEdgeWithoutSpat = filterEdge_sse4<uint8_t, false, true>;
+                        d->filterLine = filterLine_sse4<uint8_t, true>;
                     } else {
-                        d->filterEdgeWithSpat = filterEdge_sse2<uint8_t, true, false>;
-                        d->filterEdgeWithoutSpat = filterEdge_sse2<uint8_t, false, false>;
-                        d->filterLine = filterLine_sse2<uint8_t, false>;
+                        d->filterEdgeWithSpat = filterEdge_sse4<uint8_t, true, false>;
+                        d->filterEdgeWithoutSpat = filterEdge_sse4<uint8_t, false, false>;
+                        d->filterLine = filterLine_sse4<uint8_t, false>;
                     }
                     d->edgeStep = 8;
                 } else if (d->vi.format.bytesPerSample == 2) {
                     if (d->edeint) {
-                        d->filterEdgeWithSpat = filterEdge_sse2<uint16_t, true, true>;
-                        d->filterEdgeWithoutSpat = filterEdge_sse2<uint16_t, false, true>;
-                        d->filterLine = filterLine_sse2<uint16_t, true>;
+                        d->filterEdgeWithSpat = filterEdge_sse4<uint16_t, true, true>;
+                        d->filterEdgeWithoutSpat = filterEdge_sse4<uint16_t, false, true>;
+                        d->filterLine = filterLine_sse4<uint16_t, true>;
                     } else {
-                        d->filterEdgeWithSpat = filterEdge_sse2<uint16_t, true, false>;
-                        d->filterEdgeWithoutSpat = filterEdge_sse2<uint16_t, false, false>;
-                        d->filterLine = filterLine_sse2<uint16_t, false>;
+                        d->filterEdgeWithSpat = filterEdge_sse4<uint16_t, true, false>;
+                        d->filterEdgeWithoutSpat = filterEdge_sse4<uint16_t, false, false>;
+                        d->filterLine = filterLine_sse4<uint16_t, false>;
                     }
                     d->edgeStep = 4;
                 } else {
                     if (d->edeint) {
-                        d->filterEdgeWithSpat = filterEdge_sse2<float, true, true>;
-                        d->filterEdgeWithoutSpat = filterEdge_sse2<float, false, true>;
-                        d->filterLine = filterLine_sse2<float, true>;
+                        d->filterEdgeWithSpat = filterEdge_sse4<float, true, true>;
+                        d->filterEdgeWithoutSpat = filterEdge_sse4<float, false, true>;
+                        d->filterLine = filterLine_sse4<float, true>;
                     } else {
-                        d->filterEdgeWithSpat = filterEdge_sse2<float, true, false>;
-                        d->filterEdgeWithoutSpat = filterEdge_sse2<float, false, false>;
-                        d->filterLine = filterLine_sse2<float, false>;
+                        d->filterEdgeWithSpat = filterEdge_sse4<float, true, false>;
+                        d->filterEdgeWithoutSpat = filterEdge_sse4<float, false, false>;
+                        d->filterLine = filterLine_sse4<float, false>;
                     }
                     d->edgeStep = 4;
                 }

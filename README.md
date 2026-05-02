@@ -20,7 +20,7 @@ Ported from FFmpeg's libavfilter https://www.ffmpeg.org/ffmpeg-filters.html#bwdi
 - opt: Sets which cpu optimizations to use.
   - 0 = auto detect
   - 1 = use c
-  - 2 = use sse2
+  - 2 = use sse4.1
   - 3 = use avx2
   - 4 = use avx512
 
