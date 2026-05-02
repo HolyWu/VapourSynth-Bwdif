@@ -564,6 +564,6 @@ static void VS_CC bwdifCreate(const VSMap* in, VSMap* out, [[maybe_unused]] void
 // Init
 
 VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin* plugin, const VSPLUGINAPI* vspapi) {
-    vspapi->configPlugin("com.holywu.bwdif", "bwdif", "BobWeaver Deinterlacing Filter", VS_MAKE_VERSION(4, 1), VAPOURSYNTH_API_VERSION, 0, plugin);
+    vspapi->configPlugin("com.holywu.bwdif", "bwdif", "BobWeaver Deinterlacing Filter", VS_MAKE_VERSION(5, 0), VAPOURSYNTH_API_VERSION, 0, plugin);
     vspapi->registerFunction("Bwdif", "clip:vnode;field:int;edeint:vnode:opt;opt:int:opt;", "clip:vnode;", bwdifCreate, nullptr, plugin);
 }

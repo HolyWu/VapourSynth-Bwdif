@@ -3,7 +3,7 @@ project('Bwdif', 'cpp',
     license: 'LGPL-3.0-or-later',
     license_files: 'LICENSE',
     meson_version: '>=1.2.3',
-    version: '4.1',
+    version: '5.0',
 )
 
 py = import('python').find_installation(pure: false)
