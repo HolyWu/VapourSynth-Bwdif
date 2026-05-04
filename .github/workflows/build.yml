@@ -32,10 +32,7 @@ jobs:
 
     - name: Fix tag
       run: |
-        cd dist
-        for whl in *.whl; do
-          pipx run wheel tags --remove --python-tag py3 --abi-tag none $whl
-        done
+        pipx run wheel tags --remove --python-tag py3 --abi-tag none dist/*.whl
 
     - uses: actions/upload-artifact@v7
       with:
@@ -59,6 +56,7 @@ jobs:
         install: >-
           mingw-w64-ucrt-x86_64-git
           mingw-w64-ucrt-x86_64-ninja
+          mingw-w64-ucrt-x86_64-python-wheel
           mingw-w64-ucrt-x86_64-toolchain
           mingw-w64-ucrt-x86_64-uv
 
@@ -66,12 +64,14 @@ jobs:
       run: |
         uv build -Csetup-args="-Dcpp_link_args=-static"
 
-    - name: Fix tag
+    - name: Fix tag and strip dll
       run: |
         cd dist
-        for whl in *.whl; do
-          uvx wheel tags --remove --python-tag py3 --abi-tag none $whl
-        done
+        wheel tags --remove --python-tag py3 --abi-tag none *.whl
+        wheel unpack --dest unpacked *.whl
+        rm *.whl
+        strip $(find . -name '*.dll')
+        wheel pack unpacked/*
 
     - uses: actions/upload-artifact@v7
       with:
